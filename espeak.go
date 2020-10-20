@@ -437,7 +437,7 @@ func TextToSpeech(text string, voice *Voice, outfile string, params *Parameters)
 	if outfile == "" || outfile == "play" {
 		output = C.AUDIO_OUTPUT_PLAYBACK
 	} else {
-		if !strings.HasSuffix(outfile, outfile) {
+		if !strings.HasSuffix(outfile, ".wav") {
 			outfile += ".wav"
 		}
 		output = C.AUDIO_OUTPUT_SYNCHRONOUS
