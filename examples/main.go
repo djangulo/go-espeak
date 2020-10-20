@@ -3,7 +3,6 @@ package main
 import "github.com/djangulo/go-espeak"
 
 func main() {
-	//
 	espeak.TextToSpeech(
 		"Hello world!", // Text to speak
 		nil,            // voice to use, nil == DefaultVoice (en-us male)

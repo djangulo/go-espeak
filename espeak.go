@@ -440,10 +440,10 @@ func TextToSpeech(text string, voice *Voice, outfile string, params *Parameters)
 		if !strings.HasSuffix(outfile, outfile) {
 			outfile += ".wav"
 		}
-		ctext = C.CString(text)
-		defer C.free(unsafe.Pointer(ctext))
 		output = C.AUDIO_OUTPUT_SYNCHRONOUS
 	}
+	ctext = C.CString(text)
+	defer C.free(unsafe.Pointer(ctext))
 
 	if err := os.MkdirAll(params.Dir, 0755); err != nil {
 		return 0, err
