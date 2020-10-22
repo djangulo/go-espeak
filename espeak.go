@@ -395,8 +395,6 @@ func WithDir(path string) Option {
 	}
 }
 
-var ()
-
 // TextToSpeech reproduces text, using voice, modified by params.
 // If params is nil, default parameters are used.
 // If outfile is an empty string or "play", the audio is spoken to the system
@@ -437,14 +435,12 @@ func TextToSpeech(text string, voice *Voice, outfile string, params *Parameters)
 	if outfile == "" || outfile == "play" {
 		output = C.AUDIO_OUTPUT_PLAYBACK
 	} else {
-		if !strings.HasSuffix(outfile, ".wav") {
-			outfile += ".wav"
-		}
 		output = C.AUDIO_OUTPUT_SYNCHRONOUS
 	}
 	ctext = C.CString(text)
 	defer C.free(unsafe.Pointer(ctext))
 
+	outfile = ensureWavSuffix(outfile)
 	if err := os.MkdirAll(params.Dir, 0755); err != nil {
 		return 0, err
 	}
@@ -485,6 +481,16 @@ func TextToSpeech(text string, voice *Voice, outfile string, params *Parameters)
 		return 0, err
 	}
 	return uint64(C.samplestotal), nil
+}
+
+func ensureWavSuffix(s string) string {
+	for s[len(s)-1] == '.' {
+		s = s[:len(s)-1]
+	}
+	if !strings.HasSuffix(s, ".wav") {
+		s += ".wav"
+	}
+	return s
 }
 
 type EspeakError struct {

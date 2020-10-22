@@ -5,6 +5,7 @@ package espeak
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -51,4 +52,25 @@ func TestTextToSpeech(t *testing.T) {
 		}
 	})
 
+}
+
+func TestEnsureWavSuffix(t *testing.T) {
+	for _, tt := range []struct {
+		in, want string
+	}{
+		{"outfile.wav", "outfile.wav"},
+		{"out", "out.wav"},
+		{"out.mp4", "out.mp4.wav"},
+		{"out.", "out.wav"},
+		{"out....................", "out.wav"},
+		{"out...____.", "out...____.wav"},
+		{"out.", "out.wav"},
+	} {
+		t.Run(fmt.Sprintf("ensureWavSuffix(%q)==%q", tt.in, tt.want), func(t *testing.T) {
+			got := ensureWavSuffix(tt.in)
+			if got != tt.want {
+				t.Errorf("expected %q got %q", tt.want, got)
+			}
+		})
+	}
 }
