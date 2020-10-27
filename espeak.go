@@ -3,7 +3,7 @@ package espeak
 
 /*
 #cgo CFLAGS: -I/usr/include/espeak
-#cgo LDFLAGS: -lportaudio -lespeak
+#cgo LDFLAGS: -l portaudio -l espeak
 #include <stdio.h>
 #include <string.h>
 #include <malloc.h>
