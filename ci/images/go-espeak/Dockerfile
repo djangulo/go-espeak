@@ -5,6 +5,8 @@ RUN apk update && apk --no-cache add  \
     automake \
     make \
     libtool \
+    espeak \
+    portaudio \
     pkgconfig \
     ca-certificates \
     g++ \
