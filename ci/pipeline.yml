@@ -56,6 +56,7 @@ jobs:
         trigger: true
       - get: golang-1.15.x-image
       - task: run-tests
+        image: golang-1.15.x-image
         config:
           <<: *task-config
           run:
