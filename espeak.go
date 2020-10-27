@@ -1,7 +1,3 @@
-// Copyright 2020 djangulo. All rights reserved.
-// Use of this source code is governed by a GPLv3
-// license that can be found in the LICENSE file.
-
 //Package espeak implements C bindings for the Espeak voice synthesizer.
 package espeak
 
@@ -267,7 +263,7 @@ type Parameters struct {
 }
 
 // PunctuationList returns the list of punctuation characters (if any).
-func (p *Parameters) PunctuationList(chars string) string {
+func (p *Parameters) PunctuationList() string {
 	return p.punctList
 }
 
@@ -395,6 +391,54 @@ func WithDir(path string) Option {
 	}
 }
 
+// WithRate rate.
+func (p *Parameters) WithRate(rate int) *Parameters {
+	p.Rate = rate
+	return p
+}
+
+// WithVolume volume.
+func (p *Parameters) WithVolume(volume int) *Parameters {
+	p.Volume = volume
+	return p
+}
+
+// WithPitch pitch.
+func (p *Parameters) WithPitch(pitch int) *Parameters {
+	p.Pitch = pitch
+	return p
+}
+
+// WithRange rng.
+func (p *Parameters) WithRange(rng int) *Parameters {
+	p.Range = rng
+	return p
+}
+
+// WithAnnouncePunctuation punct.
+func (p *Parameters) WithAnnouncePunctuation(punct PunctType) *Parameters {
+	p.AnnouncePunctuation = punct
+	return p
+}
+
+// WithAnnounceCapitals cap.
+func (p *Parameters) WithAnnounceCapitals(cap Capitals) *Parameters {
+	p.AnnounceCapitals = cap
+	return p
+}
+
+// WithWordGap wg.
+func (p *Parameters) WithWordGap(wg int) *Parameters {
+	p.WordGap = wg
+	return p
+}
+
+// WithDir path.
+func (p *Parameters) WithDir(path string) *Parameters {
+	p.Dir = path
+	return p
+}
+
 // TextToSpeech reproduces text, using voice, modified by params.
 // If params is nil, default parameters are used.
 // If outfile is an empty string or "play", the audio is spoken to the system
@@ -493,25 +537,26 @@ func ensureWavSuffix(s string) string {
 	return s
 }
 
-type EspeakError struct {
+// LibError analog to espeak_ERROR.
+type LibError struct {
 	code int
 	err  string
 }
 
-func (e *EspeakError) Error() string {
+func (e *LibError) Error() string {
 	return fmt.Sprintf("espeak: (%d) %s", e.code, e.err)
 }
 
 // Errors
 var (
 	// EErrOK espeak return for not-really-an-error.
-	EErrOK = &EspeakError{0, "OK"}
+	EErrOK = &LibError{0, "OK"}
 	// EErrInternal espeak return for internal error
-	EErrInternal = &EspeakError{-1, "Internal error"}
+	EErrInternal = &LibError{-1, "Internal error"}
 	// EErrBufferFull espeak buffer full error.
-	EErrBufferFull = &EspeakError{1, "Buffer full"}
+	EErrBufferFull = &LibError{1, "Buffer full"}
 	// EErrNotFound espeak not found error.
-	EErrNotFound = &EspeakError{2, "Not found"}
+	EErrNotFound = &LibError{2, "Not found"}
 	// ErrEmptyText text is empty.
 	ErrEmptyText = errors.New("text is empty")
 	// ErrUnknown unknown error code.

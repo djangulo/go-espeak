@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>go-espeak demo</title>
+</head>
+<body>
+  <h1><code>go-espeak</code> demo</h1>
+  <form method="POST" action="/">
+    <select name="voice">
+      <optgroup label="Default voices">
+        <option value="en-us-male" {{if eq .VoiceName "en-us-male"}}selected{{end}}>US English Male</option>
+        <option value="en-us-female" {{if eq .VoiceName "en-us-female"}}selected{{end}}>US English Female</option>
+        <option value="en-uk-male" {{if eq .VoiceName "en-uk-male"}}selected{{end}}>UK English Male</option>
+        <option value="es-es-male" {{if eq .VoiceName "es-es-male"}}selected{{end}}>Spain Spanish Male</option>
+        <option value="es-lat-male" {{if eq .VoiceName "es-lat-male"}}selected{{end}}>Latin Spanish Male</option>
+        <option value="es-mex-male" {{if eq .VoiceName "es-mex-male"}}selected{{end}}>Mexican Spanish Male</option>
+        <option value="fr-fr-male" {{if eq .VoiceName "fr-fr-male"}}selected{{end}}>France French Male</option>
+        <option value="fr-fr-female" {{if eq .VoiceName "fr-fr-female"}}selected{{end}}>France French Female</option>
+      </optgroup>
+    </select>
+    <label for="say">Say:
+      <input type="text" name="say" placeholder="Write something to say!" {{if ne .Say ""}}value="{{.Say}}"{{end}}/>
+    </label>
+    <button type="submit">Submit</button>
+
+    <h4>Options</h4>
+    <button type="button" onclick="setDefaults()">Defaults</button>
+    <table>
+      <tbody>
+        <tr>
+          <td><label for="rate">Rate</label></td>
+          <td><input onchange="update('rate-value', this.value)" type="range"  id="rate" name="rate" min="80" max="450" value="{{if ne .Rate 160}}{{.Rate}}{{else}}160{{end}}"/></td>
+          <td><span id="rate-value">{{if ne .Rate 160}}{{.Rate}}{{else}}160{{end}}</span></td>
+        </tr>
+        <tr>
+          <td><label for="volume">Volume</label></td>
+          <td><input onchange="update('volume-value', this.value)" type="range"  id="volume" name="volume" min="0" max="200" value="{{if ne .Volume 100}}{{.Volume}}{{else}}100{{end}}"/></td>
+          <td><span id="volume-value">{{if ne .Volume 100}}{{.Volume}}{{else}}100{{end}}</span></td>
+        </tr>
+        <tr>
+          <td><label for="pitch">Pitch</label></td>
+          <td><input onchange="update('pitch-value', this.value)" type="range"  id="pitch" name="pitch" min="0" max="100" value="{{if ne .Pitch 50}}{{.Pitch}}{{else}}50{{end}}"/></td>
+          <td><span id="pitch-value">{{if ne .Pitch 50}}{{.Pitch}}{{else}}50{{end}}</span></td>
+        </tr>
+        <tr>
+          <td><label for="range">Range</label></td>
+          <td><input onchange="update('range-value', this.value)" type="range"  id="range" name="range" min="0" max="100" value="{{if ne .Range 50}}{{.Range}}{{else}}50{{end}}"/></td>
+          <td><span id="range-value">{{if ne .Range 50}}{{.Range}}{{else}}50{{end}}</span></td>
+        </tr>
+        <tr>
+          <td><label for="word-gap">Word gap</label></td>
+          <td><input onchange="update('word-gap-value', this.value)" type="range" min="0" max="50" id="word-gap" name="word-gap" min="0" max="100" value="{{if ne .WordGap 10}}{{.WordGap}}{{else}}10{{end}}"/></td>
+          <td><span id="word-gap-value">{{if ne .WordGap 10}}{{.WordGap}}{{else}}10{{end}}</span></td>
+        </tr>
+        <tr>
+          <td><label>Punctuation</label></td>
+          <td>
+            <input type="radio" id="punctuation-none" name="punctuation" value="none" {{if eq .AnnouncePunctuation "none"}}checked{{end}}>
+            <label for="punctuation-none">None</label>
+        
+            <input type="radio" id="punctuation-some" name="punctuation" value="some" {{if eq .AnnouncePunctuation "some"}}checked{{end}}>
+            <label for="punctuation-none">Some</label>
+        
+            <input type="radio" id="punctuation-all" name="punctuation" value="all" {{if eq .AnnouncePunctuation "all"}}checked{{end}}>
+            <label for="punctuation-all">All</label>
+          </td>
+          <td>
+            <input
+              type="text"
+              id="punctuation-list"
+              name="punctuation-list"
+              placeholder="Punctuation list (.,!)"
+              title='If punctuation == "some", provide a punctuation list to use.'
+              value='{{if ne .PunctList ""}}{{.PunctList}}{{end}}'>
+          </td>
+        </tr>
+        <tr>
+          <td><label>Capital ennunciation</label></td>
+          <td colspan="2">
+            <input type="radio" id="capitals-none" name="capitals" value="none" {{if eq .AnnounceCapitals "none"}}checked{{end}}>
+            <label for="capitals-none">None</label>
+
+            <input type="radio" id="capitals-sound-icon" name="capitals" value="sound-icon" {{if eq .AnnounceCapitals "sound-icon"}}checked{{end}}>
+            <label for="capitals-sound-icon">Sound icon</label>
+
+            <input type="radio" id="capitals-spelling" name="capitals" value="spelling" {{if eq .AnnounceCapitals "spelling"}}checked{{end}}>
+            <label for="capitals-spelling">Spelling</label>
+
+            <input type="radio" id="capitals-pitch-raise" name="capitals" value="pitch-raise" {{if eq .AnnounceCapitals "pitch-raise"}}checked{{end}}>
+            <label for="capitals-pitch-raise">Pitch raise</label>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </form>
+
+  <audio id="demo" src="{{.FileSource}}" type="audio/wav" autoplay>
+      Your browser does not support the <code>audio</code> element.
+  </audio>
+  
+</body>
+<script>
+  function update(id, value) {
+    document.getElementById(id).innerHTML = value;
+  }
+  function setDefaults() {
+    document.getElementById("punctuation-all").checked = true;
+    document.getElementById("capitals-none").checked = true;
+    document.getElementById("punctuation-list").value = "";
+    document.getElementById("rate").value = 160;
+    update("rate-value", 160);
+    document.getElementById("volume").value = 100;
+    update("volume-value", 100);
+    document.getElementById("pitch").value = 50;
+    update("pitch-value", 50);
+    document.getElementById("range").value = 50;
+    update("range-value", 50);
+    document.getElementById("word-gap").value = 10;
+    update("word-gap-value", 10);
+  }
+</script>
+</html>

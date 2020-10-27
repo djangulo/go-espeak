@@ -1,0 +1,26 @@
+version: "3"
+
+services:
+  sfd-staging:
+    build:
+      context: $SERVICESDIR
+      dockerfile: $SERVICESDIR/go-espeak-demo/Dockerfile
+    command: ["/go-espeak-demo", "-port", "8080", "-audio-dir", "/static/audio"]
+    environment:
+      APPHOST: $APPHOST
+    ports:
+      - "8080:8080"
+    volumes:
+      - "$SERVICESDIR/go-espeak-demo/audio:/static/audio"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.https-redirect.redirectscheme.port=443"
+      - "traefik.http.middlewares.https-redirect.redirectscheme.permanent=true"
+      - "traefik.http.routers.go-espeak-demo.middlewares=https-redirect"
+      - "traefik.http.routers.go-espeak-demo.rule=Host(`$APPHOST`)"
+      - "traefik.http.routers.go-espeak-demo.entrypoints=web"
+      - "traefik.http.routers.go-espeak-demo-tls.rule=Host(`$APPHOST`)"
+      - "traefik.http.routers.go-espeak-demo-tls.entrypoints=websecure"
+      - "traefik.http.routers.go-espeak-demo-tls.tls=true"
+      - "traefik.http.routers.go-espeak-demo-tls.tls.certresolver=leresolver"
