@@ -19,7 +19,7 @@ RUN git clone https://github.com/espeak-ng/espeak-ng.git \
         --prefix=/usr \
         --with-extdict-ru \
         --with-extdict-zh \
-        --with-extdict-zhy
+        --with-extdict-zhy \
     && make \
     && make install \
     && rm -rf /tmp/espeak
