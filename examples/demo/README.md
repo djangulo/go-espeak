@@ -2,11 +2,9 @@
 
 This is a website demo for `go-espeak`.
 
-There is a live version running in <a target="_blank" rel="noopener noreferrer" href="https://go-espeak-demo.djangulo.com">https://go-espeak-demo.djangulo.com</a>.
+There is a live version running at <a target="_blank" rel="noopener noreferrer" href="https://go-espeak-demo.djangulo.com">https://go-espeak-demo.djangulo.com</a>.
 
-`.wav` files get created and saved under `static/audio` and played instantly.
-
-Any `.wav` older than 2 seconds gets removed.
+`.wav` files get created and saved under `static/audio` and played instantly. Any `.wav` older than 1 seconds gets removed.
 
 ## Usage
 

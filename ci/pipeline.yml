@@ -1,11 +1,4 @@
 ---
-resource_types:
-  - name: terraform
-    type: docker-image
-    source:
-      repository: ljfranklin/terraform-resource
-      tag: latest
-
 resources:
   - name: go-espeak-git
     type: git
@@ -17,12 +10,6 @@ resources:
       fetch_tags: true
       check: true
 
-  - name: traefik-host-git
-    type: git
-    icon: github-circle
-    source:
-      uri: https://github.com/djangulo/terraform-traefik-host.git
-
   - name: go-espeak-image
     type: docker-image
     icon: docker
@@ -30,21 +17,6 @@ resources:
       repository: ((dockerhub/username.username))/go-espeak
       username: ((dockerhub/username.username))
       password: ((dockerhub/password.password))
-
-  - name: terraform
-    icon: terraform
-    type: terraform
-    source:
-      backend_type: s3
-      backend_config:
-        bucket: ((go-espeak/demo/tf-conf-bucket/name.name))
-        key: ((go-espeak/demo/tf-conf-bucket/key.key))
-        region: us-east-1
-        access_key: ((go-espeak/demo/tf-conf-bucket/access-key/id.id))
-        secret_key: ((go-espeak/demo/tf-conf-bucket/access-key/secret.secret))
-        endpoint: ((go-espeak/demo/tf-conf-bucket/endpoint.endpoint))
-        skip_metadata_api_check: true
-        skip_credentials_validation: true
 
 task-config: &task-config
   platform: linux
@@ -72,85 +44,3 @@ jobs:
           <<: *task-config
           run:
             path: go-espeak-git/ci/task-test.sh
-
-  - name: deploy-demo
-    plan:
-      - get: traefik-host-git
-        trigger: true
-      - put: terraform
-        params:
-          env_name: staging
-          terraform_source: traefik-host-git
-          vars:
-            do_token: ((access-tokens/digitalocean/concourse-ci.token))
-            ssh_keys:
-              [
-                "((ssh-keys/concourse-ci/pubkey-sig.signature))",
-                "((ssh-keys/personal-1/pubkey-sig.signature))",
-              ]
-            ssh_private_key: "((ssh-keys/concourse-ci/private-key.key))"
-            user: "((go-espeak/demo/ssh-user.user))"
-            letsencrypt_admin_email: "((go-espeak/demo/le-admin.email))"
-            records:
-              "@":
-                type: "A"
-                value: "droplet"
-                domain: ((go-espeak/demo/recordset/domain.domain))
-                ttl: 3600
-              "go-espeak-demo.":
-                type: "A"
-                value: "droplet"
-                domain: ((go-espeak/demo/recordset/domain.domain))
-                ttl: 3600
-      - get: go-espeak-git
-        trigger: true
-        passed: [test-unit]
-      - task: prepare-and-put-files
-        config:
-          image_resource:
-            type: registry-image
-            source: { repository: kroniak/ssh-client }
-          platform: linux
-          inputs:
-            - name: go-espeak-git
-          run:
-            path: /bin/sh
-            args:
-              - -c
-              - |
-                mkdir -p ~/.ssh
-                echo "((ssh-keys/concourse-ci/private-key.key))" > ~/.ssh/id_rsa
-                chmod -R 400 ~/.ssh
-                ssh -o StrictHostKeyChecking=no \
-                  ((go-espeak/demo/ssh-user.user))@((go-espeak/demo/host.host)) /bin/bash << EOF
-                  cd /home/((go-espeak/demo/ssh-user.user))/traefik
-                  ./compose.sh down
-                  rm -rf /home/((go-espeak/demo/ssh-user.user))/traefik/services/go-espeak-demo
-                EOF
-                apk add --no-cache rsync
-                rsync -vr --exclude={'.git/','e2e'} \
-                  go-espeak-git/examples/demo/ \
-                  ((go-espeak/demo/ssh-user.user))@((go-espeak/demo/host.host)):/home/((go-espeak/demo/ssh-user.user))/traefik/services/go-espeak-demo
-      - task: service-up
-        config:
-          image_resource:
-            type: registry-image
-            source: { repository: kroniak/ssh-client }
-          inputs:
-            - name: go-espeak-git
-          platform: linux
-          run:
-            path: /bin/sh
-            args:
-              - -c
-              - |
-                mkdir -p ~/.ssh
-                echo -e "((ssh-keys/concourse-ci/private-key.key))" > ~/.ssh/id_rsa
-                chmod -R 400 ~/.ssh
-                ssh -o StrictHostKeyChecking=no \
-                  ((go-espeak/demo/ssh-user.user))@((go-espeak/demo/host.host)) \
-                  '/usr/bin/env \
-                    WORKDIR=/home/((go-espeak/demo/ssh-user.user))/traefik \
-                    SERVICESDIR=/home/((go-espeak/demo/ssh-user.user))/traefik/services \
-                    APPHOST=go-espeak-demo.((go-espeak/demo/host.host)) \
-                    bash -s' < go-espeak-git/ci/task-deploy-demo.sh
