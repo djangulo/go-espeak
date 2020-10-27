@@ -20,12 +20,13 @@ resources:
     source:
       uri: https://github.com/djangulo/terraform-traefik-host.git
 
-  - name: golang-1.15.x-image
-    type: registry-image
+  - name: go-espeak-image
+    type: docker-image
     icon: docker
     source:
-      repository: golang
-      tag: 1.15
+      repository: ((dockerhub/username.username))/go-espeak
+      username: ((dockerhub/username.username))
+      password: ((dockerhub/password.password))
 
   - name: terraform
     icon: terraform
@@ -50,13 +51,20 @@ task-config: &task-config
     GO111MODULE: "on"
 
 jobs:
+  - name: publish-go-espeak
+    plan:
+      - get: go-espeak-git
+      - put: go-espeak-image
+        params:
+          build: go-espeak-git/ci/images/go-espeak
   - name: test-unit
     plan:
       - get: go-espeak-git
         trigger: true
-      - get: golang-1.15.x-image
+        passed: [publish-go-espeak]
+      - get: go-espeak-image
       - task: run-tests
-        image: golang-1.15.x-image
+        image: go-espeak-image
         config:
           <<: *task-config
           run:
