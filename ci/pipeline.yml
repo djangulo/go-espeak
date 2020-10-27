@@ -10,9 +10,12 @@ resources:
   - name: go-espeak-git
     type: git
     icon: github-circle
+    check_every: 10m
     source:
       uri: https://github.com/djangulo/go-espeak.git
       branch: main
+      fetch_tags: true
+      check: true
 
   - name: traefik-host-git
     type: git
