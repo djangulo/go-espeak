@@ -3,27 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Simple demonstration of go-espeak usage.">
   <title>go-espeak demo</title>
+  <link rel="stylesheet" type="text/css" href="/static/css/base.css" >
 </head>
 <body>
   <h1><code>go-espeak</code> demo</h1>
-  <form method="POST" action="/">
+  <p>This is a simple demonstration of <code>go-espeak</code>'s usage.</p>
+  <form id="wav-form" method="POST" action="/">
     <select name="voice">
       <optgroup label="Default voices">
         <option value="en-us-male" {{if eq .VoiceName "en-us-male"}}selected{{end}}>US English Male</option>
-        <option value="en-us-female" {{if eq .VoiceName "en-us-female"}}selected{{end}}>US English Female</option>
-        <option value="en-uk-male" {{if eq .VoiceName "en-uk-male"}}selected{{end}}>UK English Male</option>
         <option value="es-es-male" {{if eq .VoiceName "es-es-male"}}selected{{end}}>Spain Spanish Male</option>
         <option value="es-lat-male" {{if eq .VoiceName "es-lat-male"}}selected{{end}}>Latin Spanish Male</option>
-        <option value="es-mex-male" {{if eq .VoiceName "es-mex-male"}}selected{{end}}>Mexican Spanish Male</option>
         <option value="fr-fr-male" {{if eq .VoiceName "fr-fr-male"}}selected{{end}}>France French Male</option>
-        <option value="fr-fr-female" {{if eq .VoiceName "fr-fr-female"}}selected{{end}}>France French Female</option>
       </optgroup>
     </select>
     <label for="say">Say:
       <input type="text" name="say" placeholder="Write something to say!" {{if ne .Say ""}}value="{{.Say}}"{{end}}/>
     </label>
     <button type="submit">Submit</button>
+    <button type="button" onclick="downloadWav()">Download</button>
 
     <h4>Options</h4>
     <button type="button" onclick="setDefaults()">Defaults</button>
@@ -31,8 +31,8 @@
       <tbody>
         <tr>
           <td><label for="rate">Rate</label></td>
-          <td><input onchange="update('rate-value', this.value)" type="range"  id="rate" name="rate" min="80" max="450" value="{{if ne .Rate 160}}{{.Rate}}{{else}}160{{end}}"/></td>
-          <td><span id="rate-value">{{if ne .Rate 160}}{{.Rate}}{{else}}160{{end}}</span></td>
+          <td><input onchange="update('rate-value', this.value)" type="range"  id="rate" name="rate" min="80" max="450" value="{{if ne .Rate 175}}{{.Rate}}{{else}}175{{end}}"/></td>
+          <td><span id="rate-value">{{if ne .Rate 175}}{{.Rate}}{{else}}175{{end}}</span></td>
         </tr>
         <tr>
           <td><label for="volume">Volume</label></td>
@@ -99,26 +99,12 @@
   <audio id="demo" src="{{.FileSource}}" type="audio/wav" autoplay>
       Your browser does not support the <code>audio</code> element.
   </audio>
+
+  <footer class="footer">
+    © 2020 djangulo, <a rel="noopener noreferrer" href="https://github.com/djangulo/go-espeak/tree/main/examples/demo">view source on github.</a>
+  </footer>
   
 </body>
-<script>
-  function update(id, value) {
-    document.getElementById(id).innerHTML = value;
-  }
-  function setDefaults() {
-    document.getElementById("punctuation-all").checked = true;
-    document.getElementById("capitals-none").checked = true;
-    document.getElementById("punctuation-list").value = "";
-    document.getElementById("rate").value = 160;
-    update("rate-value", 160);
-    document.getElementById("volume").value = 100;
-    update("volume-value", 100);
-    document.getElementById("pitch").value = 50;
-    update("pitch-value", 50);
-    document.getElementById("range").value = 50;
-    update("range-value", 50);
-    document.getElementById("word-gap").value = 10;
-    update("word-gap-value", 10);
-  }
-</script>
+<script type="text/javascript" src="/static/js/base.js"></script>
+<script type="text/javascript" src="/static/js/download.js"></script>
 </html>

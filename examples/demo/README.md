@@ -4,7 +4,7 @@ This is a website demo for `go-espeak`.
 
 There is a live version running at <a target="_blank" rel="noopener noreferrer" href="https://go-espeak-demo.djangulo.com">https://go-espeak-demo.djangulo.com</a>.
 
-`.wav` files get created and saved under `static/audio` and played instantly. Any `.wav` older than 1 seconds gets removed.
+`.wav` files get created and saved under directory `audio-dir` (default `static/audio`) and played instantly, if files are meant to be downloaded, they're saved under `downloads-dir` (default `static/downloads`). `.wav` files live for 0.5 seconds under `audio-dir`, 2 seconds under `downloads-dir`.
 
 ## Usage
 

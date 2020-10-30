@@ -6,7 +6,7 @@ package espeak_test
 import "github.com/djangulo/go-espeak"
 
 func ExampleTextToSpeech() {
-	espeak.TextToSpeech("Hello world!", espeak.ENUSFemale, "play", nil)
+	espeak.TextToSpeech("Hello world!", espeak.DefaultVoice, "play", nil)
 	// or set an outfile name to save it
 	// TextToSpeech("Hello world!", ENUSFemale, "hello-world.wav", nil)
 }

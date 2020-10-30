@@ -5,16 +5,16 @@
 
 Golang C bindings for the `espeak` voice synthesizer.
 
-There is a live demo of its usage in the [examples/demo]
+There is a live demo of its usage at <a rel="noopener noreferrer" target="_blank" href="https://go-espeak-demo.djangulo.com">https://go-espeak-demo.djangulo.com</a>, source code in [examples/demo](https://github.com/djangulo/go-espeak/tree/main/examples/demo).
 
 ## Requirements
 
-- Go >= 1.14 with `cgo` support
-- <a target="_blank" rel="noopener noreferrer" href="http://espeak.sourceforge.net/">`espeak`</a>.
+- Go >= 1.15 with `cgo` support
+- <a target="_blank" rel="noopener noreferrer" href="https://sourceforge.net/projects/espeak/">`espeak`</a>.
 
 ## Install
 
-### Requirements
+### Install requirements
 
 Arch
 
@@ -28,7 +28,7 @@ Ubuntu
 ~# apt-get install espeak
 ```
 
-Install go-espeak
+### Install go-espeak
 
 ```bash
 ~$ go get -u github.com/djangulo/go-espeak
@@ -42,6 +42,7 @@ package main
 import "github.com/djangulo/go-espeak"
 
 func main() {
+	defer espeak.Terminate()
 	espeak.TextToSpeech(
 		"Hello world!", // Text to speak
 		nil,            // voice to use, nil == DefaultVoice (en-us male)

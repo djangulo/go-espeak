@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"html/template"
@@ -16,47 +17,23 @@ import (
 )
 
 var (
-	port     string
-	audioDir string
+	port         string
+	audioDir     string
+	downloadsDir string
 )
 
 func main() {
 	flag.Parse()
 
 	os.MkdirAll(audioDir, 0777)
+	os.MkdirAll(downloadsDir, 0777)
 	http.HandleFunc("/", serve)
+	http.HandleFunc("/download", download)
+	http.Handle("/downloads/", http.StripPrefix("/downloads/", http.FileServer(http.Dir(downloadsDir))))
 	http.Handle("/audio/", http.StripPrefix("/audio/", http.FileServer(http.Dir(audioDir))))
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
-	var err error
-	// clean files every 2 seconds. Any file older than 2 seconds gets removed.
-	go func() {
-		tick := time.Tick(1 * time.Second)
-		for {
-			select {
-			case <-tick:
-				twoSecondsAgo := time.Now().Add(-1 * time.Second)
-				err = filepath.Walk(audioDir, func(path string, info os.FileInfo, err error) error {
-					if err != nil {
-						log.Println(err)
-					}
-					if info.Name() == filepath.Base(audioDir) && info.IsDir() {
-						return nil
-					}
-					if info.ModTime().Before(twoSecondsAgo) {
-						p := filepath.Join(audioDir, info.Name())
-						if err := os.Remove(p); err != nil {
-							log.Println(err)
-						}
-						log.Printf("removing %s", p)
-					}
-					return nil
-				})
-				if err != nil {
-					log.Println(err)
-				}
-			}
-		}
-	}()
+	go garbageCollect()
 
 	fmt.Println("listening on port :" + port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
@@ -74,19 +51,75 @@ func init() {
 	flag.StringVar(&port, "p", "9000", "port to listen at")
 	flag.StringVar(&audioDir, "audio-dir", "static/audio", "dir to save the audio files at. will be created if needed")
 	flag.StringVar(&audioDir, "a", "static/audio", "dir to save the audio files at. will be created if needed")
+	flag.StringVar(&downloadsDir, "downloads-dir", "static/downloads", "dir to save the downloadable audio files at. will be created if needed")
+	flag.StringVar(&downloadsDir, "d", "static/downloads", "dir to save the downloadable audio files at. will be created if needed")
+}
+
+// garbageCollect cleans audio files from audioDir and downloadsDir
+// periodically
+func garbageCollect() {
+	var err error
+	tick := time.Tick(500 * time.Millisecond)
+	downloadsTick := time.Tick(2 * time.Second)
+	for {
+		select {
+		case <-tick:
+			halfASecondAgo := time.Now().Add(-500 * time.Millisecond)
+			err = filepath.Walk(audioDir, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					log.Println(err)
+				}
+				if info.Name() == filepath.Base(audioDir) && info.IsDir() {
+					return nil
+				}
+				if info.ModTime().Before(halfASecondAgo) {
+					p := filepath.Join(audioDir, info.Name())
+					if err := os.Remove(p); err != nil {
+						log.Println(err)
+					}
+					log.Printf("removing %s", p)
+				}
+				return nil
+			})
+			if err != nil {
+				log.Println(err)
+			}
+		case <-downloadsTick:
+			twoSecondsAgo := time.Now().Add(2 * time.Second)
+			err = filepath.Walk(downloadsDir, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					log.Println(err)
+				}
+				if info.Name() == filepath.Base(downloadsDir) && info.IsDir() {
+					return nil
+				}
+				if info.ModTime().Before(twoSecondsAgo) {
+					p := filepath.Join(downloadsDir, info.Name())
+					if err := os.Remove(p); err != nil {
+						log.Println(err)
+					}
+					log.Printf("removing %s", p)
+				}
+				return nil
+			})
+			if err != nil {
+				log.Println(err)
+			}
+		}
+	}
 }
 
 type data struct {
 	Error               string
-	VoiceName           string
-	Say                 string
-	Rate                int
-	Volume              int
-	Pitch               int
-	Range               int
-	AnnouncePunctuation string
-	AnnounceCapitals    string
-	WordGap             int
+	VoiceName           string `json:"voice"`
+	Say                 string `json:"say"`
+	Rate                int    `json:"rate"`
+	Volume              int    `json:"volume"`
+	Pitch               int    `json:"pitch"`
+	Range               int    `json:"range"`
+	AnnouncePunctuation string `json:"punctuation"`
+	AnnounceCapitals    string `json:"capitals"`
+	WordGap             int    `json:"word-gap"`
 	FileSource          string
 	PunctList           string
 }
@@ -97,7 +130,7 @@ func serve(w http.ResponseWriter, r *http.Request) {
 	var voice *espeak.Voice
 	var name string
 	var err error
-	params, err = getParams(r)
+	params, err = getParams(r, audioDir)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
@@ -152,35 +185,90 @@ func serve(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func download(w http.ResponseWriter, r *http.Request) {
+
+	r.ParseMultipartForm(10 << 20)
+	var params *espeak.Parameters
+	var voice *espeak.Voice
+	var name string
+	var err error
+	params, err = getParams(r, downloadsDir)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	voice, name = getVoice(r)
+
+	var d = &data{
+		VoiceName: name,
+		Rate:      params.Rate,
+		Volume:    params.Volume,
+		Pitch:     params.Pitch,
+		Range:     params.Range,
+		WordGap:   params.WordGap,
+		PunctList: params.PunctuationList(),
+	}
+	switch params.AnnounceCapitals {
+	case espeak.CapitalPitchRaise:
+		d.AnnounceCapitals = "pitch-raise"
+	case espeak.CapitalSoundIcon:
+		d.AnnounceCapitals = "sound-icon"
+	case espeak.CapitalSpelling:
+		d.AnnounceCapitals = "spelling"
+	case espeak.CapitalNone:
+		d.AnnounceCapitals = "none"
+	}
+	switch params.AnnouncePunctuation {
+	case espeak.PunctNone:
+		d.AnnouncePunctuation = "none"
+	case espeak.PunctSome:
+		d.AnnouncePunctuation = "some"
+	case espeak.PunctAll:
+		d.AnnouncePunctuation = "all"
+	}
+
+	if s := r.FormValue("say"); s != "" {
+		d.Say = s
+	}
+	if d.Say != "" {
+		src := randString(64) + ".wav"
+		d.FileSource = "/downloads/" + src
+		_, err = espeak.TextToSpeech(d.Say, voice, src, params)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		b, err := json.Marshal(d.FileSource)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		w.Write(b)
+	}
+}
+
 func getVoice(r *http.Request) (*espeak.Voice, string) {
 	r.ParseForm()
 	switch r.PostFormValue("voice") {
 	case "en-us-male":
 		return espeak.ENUSMale, "en-us-male"
-	case "en-us-female":
-		return espeak.ENUSFemale, "en-us-female"
-	case "en-uk-male":
-		return espeak.ENUKMale, "en-uk-male"
 	case "es-es-male":
 		return espeak.ESSpainMale, "es-es-male"
 	case "es-lat-male":
 		return espeak.ESLatinMale, "es-lat-male"
-	case "es-mex-male":
-		return espeak.ESMexicanMale, "es-mex-male"
 	case "fr-fr-male":
 		return espeak.FRFranceMale, "fr-fr-male"
-	case "fr-fr-female":
-		return espeak.FRFranceFemale, "fr-fr-female"
 	default:
 		return espeak.DefaultVoice, "en-us-male"
 	}
 }
 
-func getParams(r *http.Request) (*espeak.Parameters, error) {
+func getParams(r *http.Request, dir string) (*espeak.Parameters, error) {
 
 	var n int
 	var err error
-	var params = espeak.NewParameters(espeak.WithDir(audioDir))
+	var params = espeak.NewParameters(espeak.WithDir(dir))
 	r.ParseForm()
 	if rate := r.PostFormValue("rate"); rate != "" {
 		n, err = strconv.Atoi(rate)
@@ -234,12 +322,12 @@ func getParams(r *http.Request) (*espeak.Parameters, error) {
 	params.SetPunctuationList(r.PostFormValue("punctuation-list"))
 
 	switch r.PostFormValue("punctuation") {
-	case "none":
-		params.WithAnnouncePunctuation(espeak.PunctNone)
+	case "all":
+		params.WithAnnouncePunctuation(espeak.PunctAll)
 	case "some":
 		params.WithAnnouncePunctuation(espeak.PunctSome)
 	default:
-		params.WithAnnouncePunctuation(espeak.PunctAll)
+		params.WithAnnouncePunctuation(espeak.PunctNone)
 	}
 
 	switch r.PostFormValue("capitals") {

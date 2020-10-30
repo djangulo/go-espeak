@@ -1,0 +1,6 @@
+.vscode
+
+
+# demo static downloads & audio
+examples/demo/static/downloads
+examples/demo/static/audio
