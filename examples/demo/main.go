@@ -85,7 +85,7 @@ func garbageCollect() {
 				log.Println(err)
 			}
 		case <-downloadsTick:
-			twoSecondsAgo := time.Now().Add(2 * time.Second)
+			fifteenSecondsAgo := time.Now().Add(-15 * time.Second)
 			err = filepath.Walk(downloadsDir, func(path string, info os.FileInfo, err error) error {
 				if err != nil {
 					log.Println(err)
@@ -93,7 +93,7 @@ func garbageCollect() {
 				if info.Name() == filepath.Base(downloadsDir) && info.IsDir() {
 					return nil
 				}
-				if info.ModTime().Before(twoSecondsAgo) {
+				if info.ModTime().Before(fifteenSecondsAgo) {
 					p := filepath.Join(downloadsDir, info.Name())
 					if err := os.Remove(p); err != nil {
 						log.Println(err)
