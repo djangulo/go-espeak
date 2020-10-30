@@ -2,8 +2,10 @@ FROM djangulo/go-espeak:latest
 LABEL maintainer="Denis Angulo <djal@tuta.io>"
 WORKDIR /app
 
-RUN go get -v github.com/djangulo/go-espeak \
-    && cp -r $GOPATH/src/github.com/djangulo/go-espeak/examples/demo/* .
+RUN git clone https://github.com/djangulo/go-espeak.git /tmp/go-espeak \
+    && cp -r /tmp/go-espeak/examples/demo/* . \
+    && rm -rf /tmp/go-espeak
+RUN go get -u -v github.com/djangulo/go-espeak
 RUN CGO_ENABLED=1 GOOS=linux go build -p 1 -a -o ./go-espeak-demo ./...
 
 RUN addgroup golang \

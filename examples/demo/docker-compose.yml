@@ -11,12 +11,10 @@ services:
         "-port",
         "8080",
         "-audio-dir",
-        "/static/audio",
+        "static/audio",
         "-downloads-dir",
-        "/static/downloads",
+        "static/downloads",
       ]
-    environment:
-      APPHOST: $APPHOST
     ports:
       - "8080:8080"
     labels:
