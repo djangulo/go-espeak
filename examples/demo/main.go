@@ -60,7 +60,7 @@ func init() {
 func garbageCollect() {
 	var err error
 	tick := time.Tick(500 * time.Millisecond)
-	downloadsTick := time.Tick(2 * time.Second)
+	downloadsTick := time.Tick(5 * time.Second)
 	for {
 		select {
 		case <-tick:
