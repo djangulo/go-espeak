@@ -392,7 +392,7 @@ type Parameters struct {
 	AnnouncePunctuation PunctType
 	// AnnounceCapitals settings. See Capitals for details. Default None (0).
 	AnnounceCapitals Capitals
-	// WordGap between words. Default 10.
+	// WordGap pause between words, units of 10mS (at the default speed).
 	WordGap int
 	// Dir directory path to save .wav files. Default os.TempDir()
 	Dir       string

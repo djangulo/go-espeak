@@ -6,10 +6,12 @@
   <meta name="description" content="Simple demonstration of go-espeak usage.">
   <title>go-espeak demo</title>
   <link rel="stylesheet" type="text/css" href="/static/css/base.css" >
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans&family=Roboto:wght@500&family=Source+Sans+Pro&display=swap" rel="stylesheet"> 
+  <script src="https://kit.fontawesome.com/d066a5ad4b.js" crossorigin="anonymous"></script>
 </head>
 <body>
-  <h1><code>go-espeak</code> demo</h1>
-  <p>This is a simple demonstration of <code>go-espeak</code>'s usage.</p>
+  <h1>go-espeak demo</h1>
+  <p>This is a simple demonstration of <a rel="noopener noreferrer" target="_blank" href="https://github.com/djangulo/go-espeak"><code>go-espeak</code></a>'s usage.</p>
   <form id="wav-form" method="POST" action="/">
     <select name="voice">
       <optgroup label="Default voices">
@@ -22,74 +24,127 @@
     <label for="say">Say:
       <input type="text" name="say" placeholder="Write something to say!" {{if ne .Say ""}}value="{{.Say}}"{{end}}/>
     </label>
-    <button type="submit">Submit</button>
-    <button type="button" onclick="downloadWav()">Download</button>
+    <div class="flex flex-right">
+      <button type="submit">Submit</button>
+      <button type="button" onclick="downloadWav()">Download</button>
+    </div>
 
     <h4>Options</h4>
     <button type="button" onclick="setDefaults()">Defaults</button>
     <table>
       <tbody>
         <tr>
-          <td><label for="rate">Rate</label></td>
+          <td>
+            <label for="rate">Rate</label>
+            <div class="tooltip">
+              <i class="far fa-question-circle"></i>
+              <span class="tooltiptext">Rate speaking speed in word per minute. Values 80 to 450. Default 175.</span>
+            </div>
+          </td>
           <td><input onchange="update('rate-value', this.value)" type="range"  id="rate" name="rate" min="80" max="450" value="{{if ne .Rate 175}}{{.Rate}}{{else}}175{{end}}"/></td>
           <td><span id="rate-value">{{if ne .Rate 175}}{{.Rate}}{{else}}175{{end}}</span></td>
         </tr>
         <tr>
-          <td><label for="volume">Volume</label></td>
+          <td>
+            <label for="volume">Volume</label>
+            <div class="tooltip">
+              <i class="far fa-question-circle"></i>
+              <span class="tooltiptext">Volume in range 0-200. Default 100.</span>
+            </div>
+          </td>
           <td><input onchange="update('volume-value', this.value)" type="range"  id="volume" name="volume" min="0" max="200" value="{{if ne .Volume 100}}{{.Volume}}{{else}}100{{end}}"/></td>
           <td><span id="volume-value">{{if ne .Volume 100}}{{.Volume}}{{else}}100{{end}}</span></td>
         </tr>
         <tr>
-          <td><label for="pitch">Pitch</label></td>
+          <td>
+            <label for="pitch">Pitch</label>
+            <div class="tooltip">
+              <i class="far fa-question-circle"></i>
+              <span class="tooltiptext">Base pitch. Range 0-100. Default 50.</span>
+            </div>
+          </td>
           <td><input onchange="update('pitch-value', this.value)" type="range"  id="pitch" name="pitch" min="0" max="100" value="{{if ne .Pitch 50}}{{.Pitch}}{{else}}50{{end}}"/></td>
           <td><span id="pitch-value">{{if ne .Pitch 50}}{{.Pitch}}{{else}}50{{end}}</span></td>
         </tr>
         <tr>
-          <td><label for="range">Range</label></td>
+          <td>
+            <label for="range">Range</label>
+            <div class="tooltip">
+              <i class="far fa-question-circle"></i>
+              <span class="tooltiptext">Pitch range. Range 0-100. 0=monotone, 50=normal.</span>
+            </div>
+          </td>
           <td><input onchange="update('range-value', this.value)" type="range"  id="range" name="range" min="0" max="100" value="{{if ne .Range 50}}{{.Range}}{{else}}50{{end}}"/></td>
           <td><span id="range-value">{{if ne .Range 50}}{{.Range}}{{else}}50{{end}}</span></td>
         </tr>
         <tr>
-          <td><label for="word-gap">Word gap</label></td>
+          <td>
+            <label for="word-gap">Word gap</label>
+            <div class="tooltip">
+              <i class="far fa-question-circle"></i>
+              <span class="tooltiptext">Pause between words, units of 10mS (at the default rate of 175 WPM).</span>
+            </div>
+          </td>
           <td><input onchange="update('word-gap-value', this.value)" type="range" min="0" max="50" id="word-gap" name="word-gap" min="0" max="100" value="{{if ne .WordGap 10}}{{.WordGap}}{{else}}10{{end}}"/></td>
           <td><span id="word-gap-value">{{if ne .WordGap 10}}{{.WordGap}}{{else}}10{{end}}</span></td>
         </tr>
         <tr>
-          <td><label>Punctuation</label></td>
           <td>
-            <input type="radio" id="punctuation-none" name="punctuation" value="none" {{if eq .AnnouncePunctuation "none"}}checked{{end}}>
-            <label for="punctuation-none">None</label>
-        
-            <input type="radio" id="punctuation-some" name="punctuation" value="some" {{if eq .AnnouncePunctuation "some"}}checked{{end}}>
-            <label for="punctuation-none">Some</label>
-        
-            <input type="radio" id="punctuation-all" name="punctuation" value="all" {{if eq .AnnouncePunctuation "all"}}checked{{end}}>
-            <label for="punctuation-all">All</label>
+            <label>Punctuation</label>
+            <div class="tooltip">
+              <i class="far fa-question-circle"></i>
+              <span class="tooltiptext">Punctuation characters to announce.</span>
+            </div>
           </td>
-          <td>
-            <input
-              type="text"
-              id="punctuation-list"
-              name="punctuation-list"
-              placeholder="Punctuation list (.,!)"
-              title='If punctuation == "some", provide a punctuation list to use.'
-              value='{{if ne .PunctList ""}}{{.PunctList}}{{end}}'>
+          <td colspan="2">
+            <div>
+              <input onchange="togglePunctList()" type="radio" id="punctuation-none" name="punctuation" value="none" {{if eq .AnnouncePunctuation "none"}}checked{{end}}>
+              <label for="punctuation-none">None</label>
+            </div>
+            <div>
+              <input onchange="togglePunctList()" type="radio" id="punctuation-some" name="punctuation" value="some" {{if eq .AnnouncePunctuation "some"}}checked{{end}}>
+              <label for="punctuation-some">Some</label>
+              <input
+                type="text"
+                id="punctuation-list"
+                name="punctuation-list"
+                placeholder="Punctuation list (.,!)"
+                title='If punctuation == "some", provide a punctuation list to use.'
+                value='{{if ne .PunctList ""}}{{.PunctList}}{{end}}'
+                style="visibility: hidden; display: none;">
+            </div>
+            <div>
+              <input onchange="togglePunctList()" type="radio" id="punctuation-all" name="punctuation" value="all" {{if eq .AnnouncePunctuation "all"}}checked{{end}}>
+              <label for="punctuation-all">All</label>
+            </div>
           </td>
         </tr>
         <tr>
-          <td><label>Capital ennunciation</label></td>
+          <td>
+            <label>Capital ennunciation</label>
+            <div class="tooltip">
+              <i class="far fa-question-circle
+"></i>
+              <span class="tooltiptext">Setting to announce capital letters by.</span>
+            </div>
+          </td>
           <td colspan="2">
-            <input type="radio" id="capitals-none" name="capitals" value="none" {{if eq .AnnounceCapitals "none"}}checked{{end}}>
-            <label for="capitals-none">None</label>
-
-            <input type="radio" id="capitals-sound-icon" name="capitals" value="sound-icon" {{if eq .AnnounceCapitals "sound-icon"}}checked{{end}}>
-            <label for="capitals-sound-icon">Sound icon</label>
-
-            <input type="radio" id="capitals-spelling" name="capitals" value="spelling" {{if eq .AnnounceCapitals "spelling"}}checked{{end}}>
-            <label for="capitals-spelling">Spelling</label>
-
-            <input type="radio" id="capitals-pitch-raise" name="capitals" value="pitch-raise" {{if eq .AnnounceCapitals "pitch-raise"}}checked{{end}}>
-            <label for="capitals-pitch-raise">Pitch raise</label>
+            <div>
+              <input type="radio" id="capitals-none" name="capitals" value="none" {{if eq .AnnounceCapitals "none"}}checked{{end}}>
+              <label for="capitals-none">None</label>
+            </div>
+            <div>
+              <input type="radio" id="capitals-sound-icon" name="capitals" value="sound-icon" {{if eq .AnnounceCapitals "sound-icon"}}checked{{end}}>
+              <label for="capitals-sound-icon">Sound icon</label>
+            </div>
+            <div>
+              <input type="radio" id="capitals-spelling" name="capitals" value="spelling" {{if eq .AnnounceCapitals "spelling"}}checked{{end}}>
+              <label for="capitals-spelling">Spelling</label>
+            </div>
+            <div>
+              <input type="radio" id="capitals-pitch-raise" name="capitals" value="pitch-raise" {{if eq .AnnounceCapitals "pitch-raise"}}checked{{end}}>
+              <label for="capitals-pitch-raise">Pitch raise</label>
+            </div>
           </td>
         </tr>
       </tbody>
@@ -107,4 +162,7 @@
 </body>
 <script type="text/javascript" src="/static/js/base.js"></script>
 <script type="text/javascript" src="/static/js/download.js"></script>
+<script type="text/javascript">
+  togglePunctList();
+</script>
 </html>

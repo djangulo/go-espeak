@@ -1,8 +1,72 @@
+html {
+  font-size: 16px;
+}
 body {
   background-color: #fafafa;
   font: Helvetica, "Open Sans";
+  max-width: 480px;
+}
+
+h1 {
+  font-family: "Roboto", sans-serif;
+}
+
+p,
+span {
+  font-family: "Source Sans Pro", "Open Sans", sans-serif;
+}
+
+.flex {
+  margin-top: 0.5em;
+  display: flex;
+  width: 80%;
+}
+
+.flex-right {
+  align-items: flex-end;
+  justify-items: flex-end;
+  justify-content: flex-end;
+}
+
+.block {
+  display: block;
 }
 
 .footer {
   margin: 0 auto;
+}
+
+.button {
+  border-radius: 5px;
+  border: 1px solid #f9f9f9;
+}
+
+.sub {
+  color: #828282;
+  display: block;
+  word-wrap: wrap;
+  max-width: 15em;
+}
+
+.tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip .tooltiptext {
+  visibility: hidden;
+  max-width: 15em;
+  min-width: 10em;
+  background-color: #6a6a6a;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 0.5em;
+  position: absolute;
+  z-index: 1;
+  font-weight: 400;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
 }

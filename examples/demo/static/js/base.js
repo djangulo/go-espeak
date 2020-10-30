@@ -2,7 +2,7 @@ function update(id, value) {
   document.getElementById(id).innerHTML = value;
 }
 function setDefaults() {
-  document.getElementById("punctuation-all").checked = true;
+  document.getElementById("punctuation-none").checked = true;
   document.getElementById("capitals-none").checked = true;
   document.getElementById("punctuation-list").value = "";
   document.getElementById("rate").value = 175;
@@ -15,4 +15,14 @@ function setDefaults() {
   update("range-value", 50);
   document.getElementById("word-gap").value = 10;
   update("word-gap-value", 10);
+}
+function togglePunctList() {
+  var plist = document.getElementById("punctuation-list");
+   if (!document.getElementById("punctuation-some").checked) {
+     plist.style.visibility = 'hidden';
+     plist.style.display = 'none';
+   } else {
+    plist.style.visibility = 'visible';
+    plist.style.display = 'inline-block';
+   }
 }
