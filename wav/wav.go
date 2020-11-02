@@ -59,22 +59,7 @@ func (w *wavHeader) writeDataBytes(bytes int32) {
 	w.littleEndianInt32ToBytes(40, bytes)
 }
 
-// var origHeader = wavHeader{
-// 	'R', 'I', 'F', 'F', // 0-3: Marks file as riff file.
-// 	0x24, 0xf0, 0xff, 0x7f, // 4-7: Size of overall file - 8 bytes as int32.
-// 	'W', 'A', 'V', 'E', // 8-11: File Type Header. Always equals "WAVE"
-// 	'f', 'm', 't', ' ', //  12-15: Format chunk marker.
-// 	0x10, 0, 0, 0, // 16-19: Length of format data
-// 	1, 0, // 20-21: Type of format (1 is PCM) - 2 byte integer
-// 	1, 0, // 22-23: Number of channels - 2 byte integer
-// 	9, 0x3d, 0, 0, // 24-27: Sample Rate - 32 byte integer. Common values are 44100 (CD), 48000 (DAT). Sample Rate = Number of Samples per second, or Hertz.
-// 	0x12, 0x7a, 0, 0, // 28-31: (Sample Rate * BitsPerSample * Channels) / 8.
-// 	2, 0, // 32-33:  (BitsPerSample * Channels) / 8.1 - 8 bit mono2 - 8 bit stereo/16 bit mono4 - 16 bit stereo
-// 	0x10, 0, // 34-35: Bits per sample
-// 	'd', 'a', 't', 'a', // 36-39: "data" chunk header. Marks the beginning of the data section.
-// 	0x00, 0xf0, 0xff, 0x7f, // 40-43: Size of the data section.
-// }
-
+// Writer has utilities for writing to .wav files.
 type Writer struct {
 	out          io.Writer
 	err          error
@@ -82,10 +67,12 @@ type Writer struct {
 	sampleRate   int32
 }
 
+// NewWriter returns a *Writer.
 func NewWriter(w io.Writer, sampleRate int32) *Writer {
 	return &Writer{out: w, sampleRate: sampleRate}
 }
 
+// Write implements the io.Writer interface.
 func (w *Writer) Write(data []byte) (int, error) {
 	if w.err != nil {
 		return 0, w.err
@@ -96,6 +83,7 @@ func (w *Writer) Write(data []byte) (int, error) {
 	return n, err
 }
 
+// WriteSamples writes the .wav header and an []int16 to the file.
 func (w *Writer) WriteSamples(data []int16) (uint64, error) {
 	h := newWavHeader()
 	h.writeSampleRate(w.sampleRate)
