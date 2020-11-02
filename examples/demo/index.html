@@ -7,7 +7,6 @@
   <title>go-espeak demo</title>
   <link rel="stylesheet" type="text/css" href="/static/css/base.css" >
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans&family=Roboto:wght@500&family=Source+Sans+Pro&display=swap" rel="stylesheet"> 
-  <script src="https://kit.fontawesome.com/d066a5ad4b.js" crossorigin="anonymous"></script>
 </head>
 <body>
   <h1>go-espeak demo</h1>
@@ -37,7 +36,7 @@
           <td>
             <label for="rate">Rate</label>
             <div class="tooltip">
-              <i class="far fa-question-circle"></i>
+              <img class="question-circle" src="/static/img/827.svg" >
               <span class="tooltiptext">Rate speaking speed in word per minute. Values 80 to 450. Default 175.</span>
             </div>
           </td>
@@ -48,7 +47,7 @@
           <td>
             <label for="volume">Volume</label>
             <div class="tooltip">
-              <i class="far fa-question-circle"></i>
+              <img class="question-circle" src="/static/img/827.svg" >
               <span class="tooltiptext">Volume in range 0-200. Default 100.</span>
             </div>
           </td>
@@ -59,7 +58,7 @@
           <td>
             <label for="pitch">Pitch</label>
             <div class="tooltip">
-              <i class="far fa-question-circle"></i>
+              <img class="question-circle" src="/static/img/827.svg" >
               <span class="tooltiptext">Base pitch. Range 0-100. Default 50.</span>
             </div>
           </td>
@@ -70,7 +69,7 @@
           <td>
             <label for="range">Range</label>
             <div class="tooltip">
-              <i class="far fa-question-circle"></i>
+              <img class="question-circle" src="/static/img/827.svg" >
               <span class="tooltiptext">Pitch range. Range 0-100. 0=monotone, 50=normal.</span>
             </div>
           </td>
@@ -81,7 +80,7 @@
           <td>
             <label for="word-gap">Word gap</label>
             <div class="tooltip">
-              <i class="far fa-question-circle"></i>
+              <img class="question-circle" src="/static/img/827.svg" >
               <span class="tooltiptext">Pause between words, units of 10mS (at the default rate of 175 WPM).</span>
             </div>
           </td>
@@ -92,8 +91,17 @@
           <td>
             <label>Punctuation</label>
             <div class="tooltip">
-              <i class="far fa-question-circle"></i>
-              <span class="tooltiptext">Punctuation characters to announce.</span>
+              <img class="question-circle" src="/static/img/827.svg" >
+              <span class="tooltiptext text-left">
+                <p>
+                  Punctuation characters to announce.
+                </p>
+                <ul>
+                  <li>None: do not announce punctuation signs.</li>
+                  <li>Some: only announce the signs as defined in the punctuation list.</li>
+                  <li>All: announce all punctuation signs by their name.</li>
+                </ul>
+              </span>
             </div>
           </td>
           <td colspan="2">
@@ -123,9 +131,18 @@
           <td>
             <label>Capital ennunciation</label>
             <div class="tooltip">
-              <i class="far fa-question-circle
-"></i>
-              <span class="tooltiptext">Setting to announce capital letters by.</span>
+              <img class="question-circle" src="/static/img/827.svg" >
+              <span class="tooltiptext text-left">
+                <p>
+                  Setting to denote capital characters by.
+                </p>
+                <ul>
+                  <li>None: no difference from lowercase characters.</li>
+                  <li>Sound icon: plays a chime-like sound at the time the letter is pronounced.</li>
+                  <li>Spelling: announce capital letters by saying "Capital" then letter. Varies by language (e.g. french is "mayuscule").</li>
+                  <li>Pitch raise: capital letters and words with them have a raised pitch.</li>
+                </ul>
+              </span>
             </div>
           </td>
           <td colspan="2">

@@ -1,6 +1,5 @@
-// Copyright 2020 djangulo. All rights reserved.
-// Use of this source code is governed by a GPLv3
-// license that can be found in the LICENSE file.
+// Copyright 2020 djangulo. All rights reserved. Use of this source code is
+// governed by an MIT license that can be found in the LICENSE file..
 package espeak_test
 
 import "github.com/djangulo/go-espeak"

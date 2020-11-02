@@ -1,3 +1,5 @@
+// Copyright 2020 djangulo. All rights reserved. Use of this source code is
+// governed by an MIT license that can be found in the LICENSE file.
 package main
 
 import (
@@ -137,37 +139,7 @@ func serve(w http.ResponseWriter, r *http.Request) {
 	}
 	voice, name = getVoice(r)
 
-	var d = &data{
-		VoiceName: name,
-		Rate:      params.Rate,
-		Volume:    params.Volume,
-		Pitch:     params.Pitch,
-		Range:     params.Range,
-		WordGap:   params.WordGap,
-		PunctList: params.PunctuationList(),
-	}
-	switch params.AnnounceCapitals {
-	case espeak.CapitalPitchRaise:
-		d.AnnounceCapitals = "pitch-raise"
-	case espeak.CapitalSoundIcon:
-		d.AnnounceCapitals = "sound-icon"
-	case espeak.CapitalSpelling:
-		d.AnnounceCapitals = "spelling"
-	case espeak.CapitalNone:
-		d.AnnounceCapitals = "none"
-	}
-	switch params.AnnouncePunctuation {
-	case espeak.PunctNone:
-		d.AnnouncePunctuation = "none"
-	case espeak.PunctSome:
-		d.AnnouncePunctuation = "some"
-	case espeak.PunctAll:
-		d.AnnouncePunctuation = "all"
-	}
-
-	if s := r.PostFormValue("say"); s != "" {
-		d.Say = s
-	}
+	d := getData(params, name, r.FormValue("say"))
 	if d.Say != "" {
 		src := randString(64) + ".wav"
 		d.FileSource = "/audio/" + src
@@ -199,8 +171,28 @@ func download(w http.ResponseWriter, r *http.Request) {
 	}
 	voice, name = getVoice(r)
 
+	d := getData(params, name, r.FormValue("say"))
+	if d.Say != "" {
+		src := randString(64) + ".wav"
+		d.FileSource = "/downloads/" + src
+		_, err = espeak.TextToSpeech(d.Say, voice, src, params)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		b, err := json.Marshal(d.FileSource)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		w.Write(b)
+	}
+}
+
+func getData(params *espeak.Parameters, vname, say string) *data {
 	var d = &data{
-		VoiceName: name,
+		VoiceName: vname,
 		Rate:      params.Rate,
 		Volume:    params.Volume,
 		Pitch:     params.Pitch,
@@ -227,25 +219,10 @@ func download(w http.ResponseWriter, r *http.Request) {
 		d.AnnouncePunctuation = "all"
 	}
 
-	if s := r.FormValue("say"); s != "" {
-		d.Say = s
+	if say != "" {
+		d.Say = say
 	}
-	if d.Say != "" {
-		src := randString(64) + ".wav"
-		d.FileSource = "/downloads/" + src
-		_, err = espeak.TextToSpeech(d.Say, voice, src, params)
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		b, err := json.Marshal(d.FileSource)
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-			return
-		}
-		w.Write(b)
-	}
+	return d
 }
 
 func getVoice(r *http.Request) (*espeak.Voice, string) {

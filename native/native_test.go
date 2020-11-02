@@ -1,22 +1,23 @@
 // Copyright 2020 djangulo. All rights reserved. Use of this source code is
 // governed by an MIT license that can be found in the LICENSE file.
-package espeak
+package native
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/djangulo/go-espeak"
 )
 
 func TestTextToSpeech(t *testing.T) {
-	tmp, err := ioutil.TempDir("", "go-espeak-test-*")
+	tmp, err := ioutil.TempDir("", "go-espeak-native-test-*")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tmp)
-	p := NewParameters(WithDir(tmp))
+	p := espeak.NewParameters().WithDir(tmp)
 	t.Run("success", func(t *testing.T) {
 		samples, err := TextToSpeech("test speech", nil, "test", p)
 		if err != nil {
@@ -30,11 +31,11 @@ func TestTextToSpeech(t *testing.T) {
 		for _, tt := range []struct {
 			name   string
 			text   string
-			params *Parameters
-			voice  *Voice
+			params *espeak.Parameters
+			voice  *espeak.Voice
 			want   error
 		}{
-			{"empty text", "", nil, nil, ErrEmptyText},
+			{"empty text", "", nil, nil, espeak.ErrEmptyText},
 		} {
 			t.Run(tt.name, func(t *testing.T) {
 				s, err := TextToSpeech(tt.text, nil, "test", p)
@@ -51,25 +52,4 @@ func TestTextToSpeech(t *testing.T) {
 		}
 	})
 
-}
-
-func TestEnsureWavSuffix(t *testing.T) {
-	for _, tt := range []struct {
-		in, want string
-	}{
-		{"outfile.wav", "outfile.wav"},
-		{"out", "out.wav"},
-		{"out.mp4", "out.mp4.wav"},
-		{"out.", "out.wav"},
-		{"out....................", "out.wav"},
-		{"out...____.", "out...____.wav"},
-		{"out.", "out.wav"},
-	} {
-		t.Run(fmt.Sprintf("ensureWavSuffix(%q)==%q", tt.in, tt.want), func(t *testing.T) {
-			got := ensureWavSuffix(tt.in)
-			if got != tt.want {
-				t.Errorf("expected %q got %q", tt.want, got)
-			}
-		})
-	}
 }

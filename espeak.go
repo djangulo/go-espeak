@@ -1,3 +1,6 @@
+// Copyright 2020 djangulo. All rights reserved. Use of this source code is
+// governed by an MIT license that can be found in the LICENSE file.
+
 //Package espeak implements C bindings for the Espeak voice synthesizer.
 // It also provides Go wrappers around espeak's api that allow for
 // creation of custom text synthesis functions.
@@ -5,120 +8,21 @@ package espeak
 
 /*
 #cgo CFLAGS: -I/usr/include/espeak
-#cgo LDFLAGS: -l portaudio -l espeak
+#cgo LDFLAGS: -lportaudio -lespeak
 #include <stdio.h>
 #include <string.h>
 #include <malloc.h>
 #include <speak_lib.h>
-void* user_data;
-unsigned int samplestotal = 0;
-int samplerate;
-char *wavefile=NULL;
-FILE *f_wavfile = NULL;
-int OpenWavFile(char *path, int rate);
-void CloseWavFile();
-int SynthCallback(short *wav, int numsamples, espeak_EVENT *events);
-const espeak_VOICE **ListVoices(espeak_VOICE *voice_spec, unsigned int *count);
 
-// ListVoices calls espeak_ListVoices, returns a null-terminated array of
-// matching *espeak_VOICE objects and populates count with the length of said
-// array.
-const espeak_VOICE **ListVoices(espeak_VOICE *voice_spec, unsigned int *count)
-{
-    const espeak_VOICE **out;
-    out = espeak_ListVoices(voice_spec);
-    unsigned int i = 0;
-    while (out[i] != NULL)
-    {
-        i++;
-    }
-    *count = i;
-    return out;
-}
-int SynthCallback(short *wav, int numsamples, espeak_EVENT *events)
-{
-	int type;
-	if(wav == NULL)
-	{
-		CloseWavFile();
-		return(1);
-	}
-	if(f_wavfile == NULL){
-			if(OpenWavFile(wavefile, samplerate) != 0){
-				return(1);
-			}
-	}
-	if(numsamples > 0){
-		samplestotal += numsamples;
-		fwrite(wav,numsamples*2,1,f_wavfile);
-	}
-	return(0);
-}
-////////////////////////////////////////////////////////////////////////////
-// Static functions, sourced from espeak
-////////////////////////////////////////////////////////////////////////////
+static inline void *eventUserData(espeak_EVENT *event)  {
+	if (event != NULL)
+		if (event->user_data != NULL)
+			return event->user_data;
 
-// WordToString: Convert a phoneme mnemonic word into a string
-const char *WordToString(unsigned int word)
-{
-    int ix;
-    static char buf[5];
-    for (ix = 0; ix < 3; ix++)
-    {
-        buf[ix] = word >> (ix * 8);
-    }
-    buf[4] = 0;
-    return (buf);
+	return NULL;
 }
-// Write4Bytes: Write 4 bytes to a file, least significant first.
-static void Write4Bytes(FILE *f, int value)
-{
-    int ix;
-    for (ix = 0; ix < 4; ix++)
-    {
-        fputc(value & 0xff, f);
-        value = value >> 8;
-    }
-}
-int OpenWavFile(char *path, int rate)
-{
-    static unsigned char wave_hdr[44] = {
-        'R', 'I', 'F', 'F', 0x24, 0xf0, 0xff, 0x7f, 'W', 'A', 'V', 'E', 'f', 'm', 't', ' ',
-        0x10, 0, 0, 0, 1, 0, 1, 0, 9, 0x3d, 0, 0, 0x12, 0x7a, 0, 0,
-        2, 0, 0x10, 0, 'd', 'a', 't', 'a', 0x00, 0xf0, 0xff, 0x7f};
-    if (path == NULL)
-        return (2);
-    if (path[0] == 0)
-        return (0);
-    if (strcmp(path, "stdout") == 0)
-        f_wavfile = stdout;
-    else
-        f_wavfile = fopen(path, "wb");
-    if (f_wavfile == NULL)
-    {
-        fprintf(stderr, "Can't write to: '%s'\n", path);
-        return (1);
-    }
-    fwrite(wave_hdr, 1, 24, f_wavfile);
-    Write4Bytes(f_wavfile, rate);
-    Write4Bytes(f_wavfile, rate * 2);
-    fwrite(&wave_hdr[32], 1, 12, f_wavfile);
-    return (0);
-}
-void CloseWavFile()
-{
-    unsigned int pos;
-    if ((f_wavfile == NULL) || (f_wavfile == stdout))
-        return;
-    fflush(f_wavfile);
-    pos = ftell(f_wavfile);
-    fseek(f_wavfile, 4, SEEK_SET);
-    Write4Bytes(f_wavfile, pos - 8);
-    fseek(f_wavfile, 40, SEEK_SET);
-    Write4Bytes(f_wavfile, pos - 44);
-    fclose(f_wavfile);
-    f_wavfile = NULL;
-}
+
+extern int processSamples(short *wav, int numsamples, espeak_EVENT *events);
 */
 import "C"
 import (
@@ -130,9 +34,16 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 	"unsafe"
+
+	"github.com/djangulo/go-espeak/wav"
 )
+
+func init() {
+	rand.Seed(time.Now().Unix())
+}
 
 // Age voice age in years, 0 for not specified.
 type Age int
@@ -248,15 +159,34 @@ func ListVoices(spec *Voice) (voices []*Voice, err error) {
 	if spec != nil {
 		voiceSpec = spec.cptr()
 	}
-	var length C.uint = 0
-	// out is Ctype const espeak_VOICE **
-	out := C.ListVoices(voiceSpec, &length)
+	// out is Ctype const espeak_VOICE ** (pointer to array)
+	out := C.espeak_ListVoices(voiceSpec)
 	defer C.free(unsafe.Pointer(out))
-	cVoices := (*[1 << 28]*C.espeak_VOICE)(unsafe.Pointer(out))[:length:length]
+	// slice-ification of a C.espeak_VOICE ** into a slice
+	//     (*C.espeak_VOICE)(unsafe.Pointer(out)) gets the actual array
+	//     length is fixed at a 1000 as we don't know how many return
+	//     espeak_ListVoices returns a NULL terminated array
+	cVoices := (*[1 << 28]*C.espeak_VOICE)(
+		unsafe.Pointer(
+			(*C.espeak_VOICE)(unsafe.Pointer(out))))[:1000:1000]
+	defer func() {
+		cVoices = nil
+		out = nil
+	}() // garbage collect
 	voices = make([]*Voice, 0)
 	for _, cv := range cVoices {
-		voices = append(voices, voiceFromCptr(unsafe.Pointer(cv)))
+		if cv == nil {
+			break
+		}
+		if useMbrola {
+			voices = append(voices, voiceFromCptr(unsafe.Pointer(cv)))
+		} else {
+			if !strings.HasPrefix(C.GoString(cv.identifier), "mb") {
+				voices = append(voices, voiceFromCptr(unsafe.Pointer(cv)))
+			}
+		}
 	}
+
 	return voices, nil
 }
 
@@ -622,9 +552,12 @@ func (a AudioOutput) toC() C.espeak_AUDIO_OUTPUT {
 var (
 	initialized bool
 	useMbrola   bool
+	sampleRate  int32
 )
 
-// Init wrapper around espeak_Initialize.
+// Init wrapper around espeak_Initialize. Returns a uintptr id which the
+// address of the data block (T: *[]int16) acted on, and the sample rate
+// used.
 //   - output AudioOutput type.
 //   - bufferLength length in mS of sound buffers passed to the SynthCallback
 //     function. If 0 gives a default of 200mS. Only used for
@@ -636,14 +569,14 @@ func Init(
 	bufferLength int,
 	path string,
 	options InitOption,
-) (int, error) {
+) (uintptr, int32, error) {
 	if bufferLength == 0 {
 		bufferLength = 200
 	}
 
-	if initialized {
-		return 0, ErrAlreadyInitialized
-	}
+	// if initialized {
+	// 	return id, 0, ErrAlreadyInitialized
+	// }
 	if options&UseMbrola == UseMbrola {
 		useMbrola = true
 	}
@@ -652,19 +585,22 @@ func Init(
 		cPath = C.CString(path)
 		defer C.free(unsafe.Pointer(cPath))
 	}
-	var sr C.int
-	sr = C.espeak_Initialize(
+	sr := C.espeak_Initialize(
 		output.toC(),
 		C.int(bufferLength),
 		cPath,
 		C.int(options),
 	)
 	if int(sr) == -1 {
-		return 0, EErrInternal
+		return 0, 0, EErrInternal
 	}
-	C.samplerate = sr
+	id, _, err := registry.newData()
+	if err != nil {
+		return 0, 0, err
+	}
+	sampleRate = int32(sr)
 	initialized = true
-	return int(sr), nil
+	return id, sampleRate, nil
 }
 
 // SetSynthCallback to the unsafe.Pointer passed. The underlying C object
@@ -747,11 +683,16 @@ func Synth(
 	flags FlagType,
 	startPos, endPos uint32,
 	posType PositionType,
-	uniqueIdent *C.uint,
+	uniqueIdent *uint64,
 	userData unsafe.Pointer,
 ) error {
 	ctext := C.CString(text)
 	defer C.free(unsafe.Pointer(ctext))
+
+	var uid *C.uint
+	if uniqueIdent != nil {
+		*uid = C.uint(*uniqueIdent)
+	}
 
 	ee := C.espeak_Synth(
 		unsafe.Pointer(ctext),
@@ -760,7 +701,7 @@ func Synth(
 		posType.toC(),
 		C.uint(endPos),
 		C.uint(flags),
-		uniqueIdent,
+		uid,
 		userData)
 	if err := ErrFromCode(ee); err != nil {
 		return err
@@ -809,20 +750,43 @@ func TextToSpeech(text string, voice *Voice, outfile string, params *Parameters)
 	if voice == nil {
 		voice = DefaultVoice
 	}
-
-	var (
-		uniqueIdentifier *C.uint
-		userData         unsafe.Pointer
-		// bufLength length in mS of sound buffers passed to the SynthCallback
-		// function. Value=0 gives a default of 200mS
-		bufLength int = 200
-		output    AudioOutput
-	)
-
+	// if outfile is "play" or empty, play the audio
+	// this path is simple, as pretty much only the voice is set
 	if outfile == "" || outfile == "play" {
-		output = Playback
-	} else {
-		output = Synchronous
+		_, _, err := Init(Playback, -1, "", PhonemeEvents)
+		// if the error is of type ErrAllreadyInitialized, continue
+		if err != nil && !errors.Is(err, ErrAlreadyInitialized) {
+			return 0, err
+		}
+		if err := params.SetVoiceParams(); err != nil {
+			return 0, err
+		}
+
+		if err := SetVoiceByName(voice.Name); err != nil {
+			return 0, err
+		}
+		var uid *uint64
+		if err := Synth(
+			text,
+			CharsAuto|EndPause,
+			0,
+			0,
+			Character,
+			uid,
+			unsafe.Pointer(nil)); err != nil {
+			return 0, err
+		}
+		if err := Synchronize(); err != nil {
+			return 0, err
+		}
+		return 0, nil
+	}
+	// outputting to wav
+
+	// Gensamples calls init
+	data, err := GenSamples(text, voice, params)
+	if err != nil {
+		return 0, err
 	}
 
 	outfile = ensureWavSuffix(outfile)
@@ -830,34 +794,93 @@ func TextToSpeech(text string, voice *Voice, outfile string, params *Parameters)
 		return 0, err
 	}
 	outfile = filepath.Join(params.Dir, outfile)
+	fh, _ := os.Create(outfile)
+	defer fh.Close()
 
-	C.wavefile = C.CString(outfile)
-	defer C.free(unsafe.Pointer(C.wavefile))
+	w := wav.NewWriter(fh, sampleRate)
+	written, err := w.WriteSamples(data)
+	if err != nil {
+		return 0, nil
+	}
+	return written, nil
+}
 
-	_, err := Init(output, bufLength, "", PhonemeEvents)
-	// if the error is of type ErrAllreadyInitialized, continue
-	if err != nil && !errors.Is(err, ErrAlreadyInitialized) {
-		return 0, err
+// GenSamples generates a []int16 sample slice containing the data of text,
+// using voice, modified by params. If params is nil, default parameters are
+// used.
+func GenSamples(text string, voice *Voice, params *Parameters) ([]int16, error) {
+	if text == "" {
+		return nil, ErrEmptyText
+	}
+	if params == nil {
+		params = NewParameters()
+	}
+	if voice == nil {
+		voice = DefaultVoice
 	}
 
+	id, _, err := Init(Synchronous, 200, "", PhonemeEvents)
+	// if the error is of type ErrAllreadyInitialized, continue
+	if err != nil && !errors.Is(err, ErrAlreadyInitialized) {
+		return nil, err
+	}
+
+	var (
+		uniqueIdentifier *uint64
+		userData         = unsafe.Pointer(&id)
+	)
 	if err := params.SetVoiceParams(); err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	//set call back
-	SetSynthCallback(C.SynthCallback)
+	SetSynthCallback(C.processSamples)
 	if err := SetVoiceByName(voice.Name); err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	if err := Synth(text, CharsAuto|EndPause, 0, 0, Character, uniqueIdentifier, userData); err != nil {
-		return 0, err
+	// _, err = registry.newData(id)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	if err := Synth(
+		text,
+		CharsAuto|EndPause,
+		0,
+		0,
+		Character,
+		uniqueIdentifier,
+		userData); err != nil {
+		return nil, err
 	}
 	if err := Synchronize(); err != nil {
-		return 0, err
+		return nil, err
 	}
+	data := registry.getData(id)
+	defer registry.removeData(id)
 
-	return uint64(C.samplestotal), nil
+	return *data, nil
+}
+
+// SampleRate return the produced sample rate.
+func SampleRate() int32 {
+	return sampleRate
+}
+
+//export processSamples
+func processSamples(wav *C.short, numsamples C.int, events *C.espeak_EVENT) C.int {
+	if wav == nil {
+		return 1
+	}
+	id := (*uintptr)(unsafe.Pointer(C.eventUserData(events)))
+	data := registry.getData(*id)
+	length := int(numsamples)
+	*data = append(
+		*data,
+		(*[1 << 28]int16)(unsafe.Pointer(wav))[:length:length]...,
+	)
+	return 0
 }
 
 func ensureWavSuffix(s string) string {
@@ -914,4 +937,78 @@ func ErrFromCode(code C.espeak_ERROR) error {
 	default:
 		return ErrUnknown
 	}
+}
+
+// registry keys
+
+/*
+wav [ ][ ][ ][ ]
+^    ^
+|    |
+|    |- mem+1
+|-mem spot
+*/
+
+var registry = &cache{
+	samples: make([]*[]int16, 0),
+}
+
+type cache struct {
+	sync.Mutex
+	samples []*[]int16
+}
+
+func (c *cache) newData() (uintptr, *[]int16, error) {
+	c.Lock()
+	defer c.Unlock()
+
+	d := make([]int16, 0)
+	c.samples = append(c.samples, &d)
+	return uintptr(unsafe.Pointer(&d)), &d, nil
+}
+
+func (c *cache) removeData(id uintptr) error {
+	c.Lock()
+	defer c.Unlock()
+
+	for i, data := range c.samples {
+		if uintptr(unsafe.Pointer(data)) == id {
+			c.samples[i] = c.samples[len(c.samples)-1]
+			c.samples[len(c.samples)-1] = nil
+			c.samples = c.samples[:len(c.samples)-1]
+			return nil
+		}
+	}
+
+	return fmt.Errorf("id not found: %v", id)
+}
+
+// getData returns a copy of the data (as it may be deleted later)
+func (c *cache) exportData(id uintptr) []int16 {
+	c.Lock()
+	defer c.Unlock()
+
+	for _, data := range c.samples {
+		if uintptr(unsafe.Pointer(data)) == id {
+			cp := make([]int16, len(*data), cap(*data))
+			copy(cp, *data)
+			return cp
+		}
+	}
+
+	return nil
+}
+
+// getData returns the pointer to the data.
+func (c *cache) getData(id uintptr) *[]int16 {
+	c.Lock()
+	defer c.Unlock()
+
+	for _, data := range c.samples {
+		if uintptr(unsafe.Pointer(data)) == id {
+			return data
+		}
+	}
+
+	return nil
 }

@@ -7,6 +7,8 @@ Golang C bindings for the `espeak` voice synthesizer.
 
 There is a live demo of its usage at <a rel="noopener noreferrer" target="_blank" href="https://go-espeak-demo.djangulo.com">https://go-espeak-demo.djangulo.com</a>, source code in [examples/demo](https://github.com/djangulo/go-espeak/tree/main/examples/demo).
 
+Sub-package `native` contains a mostly C implementation, minimizing the amount of Go used. This implementation is slightly faster than the go implementation, with the inconvenience of being a black box from the input to the `.wav`.
+
 ## Requirements
 
 - Go >= 1.15 with `cgo` support
@@ -36,19 +38,30 @@ Ubuntu
 
 ## Usage
 
+[examples/basic-usage](https://github.com/djangulo/go-espeak/tree/main/examples/basic-usage).
+
 ```golang
 package main
 
-import "github.com/djangulo/go-espeak"
+import (
+	"github.com/djangulo/go-espeak"
+)
 
 func main() {
+
+	// need to call terminate so espeak can clean itself out
 	defer espeak.Terminate()
+	params := espeak.NewParameters().WithDir(".")
 	espeak.TextToSpeech(
-		"Hello world!", // Text to speak
+		"Hello World!", // Text to speak
 		nil,            // voice to use, nil == DefaultVoice (en-us male)
-		"play",         // outfile to save to, "play" just plays the synth
-		nil,            // Parameters for voice modulation, nil == DefaultParameters
+		"hello.wav",    // if "" or "play", it plays to default audio out
+		params,         // Parameters for voice modulation, nil == DefaultParameters
 	)
+
+	// get a random spanish voice
+	v, _ := espeak.VoiceFromSpec(&espeak.Voice{Languages: "es"})
+	espeak.TextToSpeech("¡Hola mundo!", v, "hola.wav", params)
 }
 
 ```
