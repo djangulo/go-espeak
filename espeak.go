@@ -567,22 +567,19 @@ var (
 func Init(
 	output AudioOutput,
 	bufferLength int,
-	path string,
+	path *string,
 	options InitOption,
 ) (uintptr, int32, error) {
 	if bufferLength == 0 {
 		bufferLength = 200
 	}
 
-	// if initialized {
-	// 	return id, 0, ErrAlreadyInitialized
-	// }
 	if options&UseMbrola == UseMbrola {
 		useMbrola = true
 	}
 	var cPath *C.char
-	if path != "" {
-		cPath = C.CString(path)
+	if path != nil {
+		cPath = C.CString(*path)
 		defer C.free(unsafe.Pointer(cPath))
 	}
 	sr := C.espeak_Initialize(
@@ -753,7 +750,7 @@ func TextToSpeech(text string, voice *Voice, outfile string, params *Parameters)
 	// if outfile is "play" or empty, play the audio
 	// this path is simple, as pretty much only the voice is set
 	if outfile == "" || outfile == "play" {
-		_, _, err := Init(Playback, -1, "", PhonemeEvents)
+		_, _, err := Init(Playback, -1, nil, PhonemeEvents)
 		// if the error is of type ErrAllreadyInitialized, continue
 		if err != nil && !errors.Is(err, ErrAlreadyInitialized) {
 			return 0, err
@@ -819,7 +816,7 @@ func GenSamples(text string, voice *Voice, params *Parameters) ([]int16, error) 
 		voice = DefaultVoice
 	}
 
-	id, _, err := Init(Synchronous, 200, "", PhonemeEvents)
+	id, _, err := Init(Synchronous, 200, nil, PhonemeEvents)
 	// if the error is of type ErrAllreadyInitialized, continue
 	if err != nil && !errors.Is(err, ErrAlreadyInitialized) {
 		return nil, err
@@ -838,11 +835,6 @@ func GenSamples(text string, voice *Voice, params *Parameters) ([]int16, error) 
 	if err := SetVoiceByName(voice.Name); err != nil {
 		return nil, err
 	}
-
-	// _, err = registry.newData(id)
-	// if err != nil {
-	// 	return nil, err
-	// }
 
 	if err := Synth(
 		text,
